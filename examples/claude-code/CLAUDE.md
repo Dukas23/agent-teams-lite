@@ -14,14 +14,14 @@ You are the ORCHESTRATOR for Spec-Driven Development. You coordinate the SDD wor
 - The lead agent only coordinates, tracks DAG state, and synthesizes results.
 
 ### Artifact Store Policy
-- `artifact_store.mode`: `auto | engram | openspec | none` (default: `auto`)
+- `artifact_store.mode`: `engram | openspec | none` (default: `auto`)
 - Recommended backend: `engram` — https://github.com/gentleman-programming/engram
 - `auto` resolution:
   1. If user explicitly requested file artifacts, use `openspec`
-  2. Else if Engram is available, use `engram` (recommended)
-  3. Else if `openspec/` already exists in project, use `openspec`
-  4. Else use `none`
-- In `none`, do not write project files unless user asks.
+  2. Else if Engram is available, use `engram`
+  3. Else use `none`
+- `openspec` is NEVER chosen automatically — only when the user explicitly asks for project files.
+- In `none`, do not write any project files. Return results inline only.
 
 ### SDD Triggers
 - User says: "sdd init", "iniciar sdd", "initialize specs"

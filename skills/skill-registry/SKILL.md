@@ -37,13 +37,15 @@ You generate or update the **skill registry** — a catalog of all available ski
 
 ### Step 2: Scan Project Conventions
 
-1. Check the project root for a conventions index file. Look for (in priority order):
+1. Check the project root for convention files. Look for:
    - `agents.md` or `AGENTS.md`
    - `CLAUDE.md` (only project-level, not `~/.claude/CLAUDE.md`)
    - `.cursorrules`
    - `GEMINI.md`
    - `copilot-instructions.md`
-2. Record ALL found files (a project can have multiple)
+2. **If an index file is found** (e.g., `agents.md`, `AGENTS.md`): READ its contents and extract all referenced file paths. These index files typically list project conventions with paths — extract every referenced path and include it in the registry table alongside the index file itself.
+3. For non-index files (`.cursorrules`, `CLAUDE.md`, etc.): record the file directly.
+4. The final table should include the index file AND all paths it references — zero extra hops for sub-agents.
 
 ### Step 3: Write the Registry
 
@@ -63,12 +65,13 @@ As your FIRST step before starting any work, identify and load skills relevant t
 
 ## Project Conventions
 
-| File | Path |
-|------|------|
-| {filename} | {path relative to project root} |
-| ... | ... |
+| File | Path | Notes |
+|------|------|-------|
+| {index file} | {path} | Index — references files below |
+| {referenced file} | {extracted path} | Referenced by {index file} |
+| {standalone file} | {path} | |
 
-Read any project convention files listed above for project-specific patterns and rules.
+Read the convention files listed above for project-specific patterns and rules. All referenced paths have been extracted — no need to read index files to discover more.
 ```
 
 ### Step 4: Persist the Registry

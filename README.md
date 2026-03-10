@@ -51,6 +51,8 @@ ORCHESTRATOR (delegate-only, minimal context):
 
 **The key insight**: the orchestrator NEVER does real work directly — not just SDD phases, but ANY task. It delegates everything to sub-agents, tracks state, and synthesizes summaries. This keeps the main thread small and stable. For substantial features, it uses the SDD workflow (structured DAG of phases). For smaller tasks, it still delegates to a general sub-agent.
 
+**Sub-agents auto-discover your skills.** If you have coding skills installed (React, TDD, Playwright, Django, etc.), sub-agents automatically load the relevant ones before writing code. A [skill registry](#skill-registry) catalogs your skills and project conventions so every sub-agent knows what patterns to follow — even though it starts with a fresh context.
+
 ### Persistence Is Pluggable
 
 The workflow engine is storage-agnostic. Artifacts can be persisted in:
@@ -324,7 +326,9 @@ We publish versioned release notes on GitHub:
 
 Latest release:
 
-- `v3.0.5` — Lean orchestrator prompts across all agents, reduced always-loaded prompt footprint, and standardized `_shared` install steps.
+- `v3.3.1` — Skill registry skill, engram-first discovery, inline persistence in all skills.
+- `v3.3.0` — Mandatory persist steps, initial skill registry, knowledge persistence for non-SDD sub-agents.
+- `v3.2.3` — Inline engram instructions in all skills and agent configs (fixes 3-hop file read chain bug).
 
 ---
 
@@ -332,7 +336,7 @@ Latest release:
 
 | Command | What It Does |
 |---------|-------------|
-| `/sdd-init` | Initialize SDD context. Detects stack and bootstraps the active persistence backend. |
+| `/sdd-init` | Initialize SDD context. Detects stack, bootstraps persistence, builds skill registry. |
 | `/sdd-explore <topic>` | Investigate an idea. Reads codebase, compares approaches. No files created. |
 | `/sdd-new <name>` | Start a new change by delegating exploration + proposal to sub-agents. |
 | `/sdd-continue` | Run the next dependency-ready phase via sub-agent(s). |
@@ -340,6 +344,7 @@ Latest release:
 | `/sdd-apply` | Implement tasks in batches. Checks off items as it goes. |
 | `/sdd-verify` | Validate implementation against specs. Reports CRITICAL / WARNING / SUGGESTION. |
 | `/sdd-archive` | Close a change and persist final state in the active artifact store. |
+| `/skill-registry` | Create or update the skill registry for the current project. |
 
 ### Example Flow
 
@@ -368,10 +373,11 @@ AI:  ✓ specs/ui/spec.md — 3 requirements, 7 scenarios
 You: /sdd-apply
 
 AI:  Implementing Phase 1 (Foundation)...
-     ✓ 1.1 Created ThemeContext
-     ✓ 1.2 Added CSS custom properties
+     ✓ Loaded skills: react-19, typescript, tailwind-4
+     ✓ 1.1 Created ThemeContext (React 19 patterns, no useMemo needed)
+     ✓ 1.2 Added CSS custom properties via Tailwind theme
      ✓ 1.3 Added localStorage persistence
-     
+
      3/8 tasks complete. Continue with Phase 2?
 ```
 
@@ -379,11 +385,11 @@ AI:  Implementing Phase 1 (Foundation)...
 
 ## The Sub-Agents
 
-Each sub-agent is a SKILL.md file — pure Markdown instructions that any AI assistant can follow.
+Each sub-agent is a SKILL.md file — pure Markdown instructions that any AI assistant can follow. All sub-agents load the [skill registry](#skill-registry) as Step 1 before starting work.
 
 | Sub-Agent | Skill File | What It Does |
 |-----------|-----------|-------------|
-| **Init** | `sdd-init/SKILL.md` | Detects project stack, creates `openspec/` structure |
+| **Init** | `sdd-init/SKILL.md` | Detects project stack, bootstraps persistence, builds skill registry |
 | **Explorer** | `sdd-explore/SKILL.md` | Reads codebase, compares approaches, identifies risks |
 | **Proposer** | `sdd-propose/SKILL.md` | Creates `proposal.md` with intent, scope, rollback plan |
 | **Spec Writer** | `sdd-spec/SKILL.md` | Writes delta specs (ADDED/MODIFIED/REMOVED) with Given/When/Then |
@@ -392,28 +398,58 @@ Each sub-agent is a SKILL.md file — pure Markdown instructions that any AI ass
 | **Implementer** | `sdd-apply/SKILL.md` | Writes code following specs and design, marks tasks complete. v2.0: TDD workflow support |
 | **Verifier** | `sdd-verify/SKILL.md` | Validates implementation against specs with real test execution. v2.0: spec compliance matrix |
 | **Archiver** | `sdd-archive/SKILL.md` | Merges delta specs into main specs, moves to archive |
+| **Skill Registry** | `skill-registry/SKILL.md` | Scans user skills + project conventions, writes `.atl/skill-registry.md` |
 
 ### Shared Conventions
 
-All 9 skills reference three shared convention files in `skills/_shared/` instead of inlining persistence logic. This removes duplication and ensures consistent behavior across the entire workflow.
+All skills reference three shared convention files in `skills/_shared/`. Critical engram calls (`mem_search`, `mem_save`, `mem_get_observation`) are also **inlined directly in each skill** so sub-agents don't need to follow multi-hop file references.
 
 | File | Purpose |
 |------|---------|
-| `persistence-contract.md` | Mode resolution rules — how `engram`, `openspec`, `hybrid`, and `none` modes behave, what each mode reads/writes, and the fallback policy |
-| `engram-convention.md` | Deterministic artifact naming (`sdd/{change-name}/{artifact-type}`), two-step recovery protocol (search then get full content), and write/update patterns via `topic_key` upserts |
+| `persistence-contract.md` | Mode resolution rules, sub-agent context protocol, skill registry loading protocol |
+| `engram-convention.md` | Supplementary reference for deterministic naming (`sdd/{change-name}/{artifact-type}`) and two-step recovery. Critical calls are inlined in skills. |
 | `openspec-convention.md` | Filesystem paths for each artifact, directory structure, config.yaml reference, and archive layout |
 
-**Why they exist:**
-- **DRY** — Previously each skill inlined its own persistence logic (~224 lines of duplication across 9 skills). Now each skill references the shared files.
-- **Deterministic recovery** — Engram artifact naming follows a strict `sdd/{change}/{type}` convention with `topic_key`, so any skill can reliably find artifacts created by other skills without fuzzy search.
+**Why inline + shared:**
+- **Sub-agents fail multi-hop chains** — A 3-hop read chain (skill → convention file → actual instructions) breaks non-Claude models. Inlining the critical calls eliminates this.
+- **Deterministic recovery** — Engram artifact naming follows a strict `sdd/{change}/{type}` convention with `topic_key`, so any skill can reliably find artifacts created by other skills.
 - **Consistent mode behavior** — All skills resolve `engram | openspec | hybrid | none` the same way. `openspec` and `hybrid` are never chosen automatically.
 
-### v2.0 Skill Upgrades
+### Skill Registry
 
-Two skills received major upgrades:
+Sub-agents start with a **fresh context** — they don't know what user skills exist (React, TDD, Playwright, etc.). The skill registry solves this.
 
-- **sdd-apply v2.0** — Added TDD workflow support. When enabled (via `openspec/config.yaml` or orchestrator config), the implementer follows a RED-GREEN-REFACTOR cycle: write a failing test first, implement until it passes, then refactor. Controlled by `tdd: true` and `test_command` in config.
-- **sdd-verify v2.0** — Now performs real test execution instead of static analysis only. Runs the project's test suite and build commands, produces a spec compliance matrix mapping each requirement to PASS/FAIL/SKIP, and reports issues at CRITICAL/WARNING/SUGGESTION severity levels. Configurable via `test_command`, `build_command`, and `coverage_threshold`.
+**How it works:**
+1. `/sdd-init` or `/skill-registry` scans your installed skills and project conventions
+2. Writes `.atl/skill-registry.md` in the project root (mode-independent, always created)
+3. If engram is available, also saves to engram (cross-session bonus)
+4. Every sub-agent reads the registry as **Step 1** before starting any work
+
+**Read priority:** Engram first (fast, survives compaction) → `.atl/skill-registry.md` as fallback.
+
+**What it contains:**
+- User skills table: trigger → skill name → path (e.g., "React components" → `react-19` → `~/.claude/skills/react-19/SKILL.md`)
+- Project conventions found: `agents.md`, `CLAUDE.md`, `.cursorrules`, etc.
+
+**When to update:** Run `/skill-registry` after installing or removing skills.
+
+### Notable Upgrades
+
+**v2.0 — TDD + Real Execution:**
+- **sdd-apply v2.0** — TDD workflow support. RED-GREEN-REFACTOR cycle when enabled via config.
+- **sdd-verify v2.0** — Real test execution + spec compliance matrix (PASS/FAIL/SKIP per requirement).
+
+**v3.2.3 — Inline Engram Persistence:**
+- All 9 SDD skills now have critical engram calls (`mem_search`, `mem_save`, `mem_get_observation`) inlined directly in their numbered steps. Sub-agents no longer need to follow a 3-hop file read chain to find persistence instructions.
+
+**v3.3.0 — Mandatory Persist Steps + Knowledge Persistence:**
+- Every skill has an explicit numbered "Persist Artifact" step — models were ignoring the contract section and skipping persistence. Now it's impossible to miss.
+- Non-SDD sub-agents are instructed to save discoveries, decisions, and bug fixes to engram automatically.
+
+**v3.3.1 — Skill Registry:**
+- New `skill-registry` skill for creating/updating the registry on demand.
+- All sub-agents load the skill registry as **Step 1** — they now know about your coding skills (React, TDD, Playwright, etc.) and project conventions.
+- Engram-first + `.atl/skill-registry.md` fallback — works with or without engram.
 
 ---
 
@@ -438,14 +474,14 @@ Dedicated setup guides for all supported tools:
 ./scripts/install.sh  # Choose option 1: Claude Code
 
 # Or manually
-cp -r skills/_shared skills/sdd-* ~/.claude/skills/
+cp -r skills/_shared skills/sdd-* skills/skill-registry ~/.claude/skills/
 ```
 
 **2. Add orchestrator to `~/.claude/CLAUDE.md`:**
 
 Append the contents of [`examples/claude-code/CLAUDE.md`](examples/claude-code/CLAUDE.md) to your existing `CLAUDE.md`.
 
-The example is intentionally lean to avoid token bloat in always-loaded system prompts. Detailed persistence and artifact rules live in `~/.claude/skills/_shared/*.md`.
+The example is intentionally lean to avoid token bloat in always-loaded system prompts. Critical engram calls are inlined in each skill file.
 
 This keeps your existing assistant identity and adds SDD as an orchestration overlay.
 
@@ -470,7 +506,7 @@ Open Claude Code and type `/sdd-init` — it should recognize the command.
 ./scripts/install.sh  # Choose option 2: OpenCode
 
 # Or manually
-cp -r skills/_shared skills/sdd-* ~/.config/opencode/skills/
+cp -r skills/_shared skills/sdd-* skills/skill-registry ~/.config/opencode/skills/
 cp examples/opencode/commands/sdd-*.md ~/.config/opencode/commands/
 ```
 
@@ -509,7 +545,7 @@ How to use in OpenCode:
 ./scripts/install.sh  # Choose Gemini CLI option
 
 # Or manually
-cp -r skills/_shared skills/sdd-* ~/.gemini/skills/
+cp -r skills/_shared skills/sdd-* skills/skill-registry ~/.gemini/skills/
 ```
 
 **2. Add orchestrator to `~/.gemini/GEMINI.md`:**
@@ -535,7 +571,7 @@ Open Gemini CLI and type `/sdd-init` — it should recognize the command.
 ./scripts/install.sh  # Choose Codex option
 
 # Or manually
-cp -r skills/_shared skills/sdd-* ~/.codex/skills/
+cp -r skills/_shared skills/sdd-* skills/skill-registry ~/.codex/skills/
 ```
 
 **2. Add orchestrator instructions:**
@@ -558,7 +594,7 @@ VS Code supports MCP and custom instructions natively. The skills work with Copi
 
 ```bash
 # Per-project (recommended)
-cp -r skills/_shared skills/sdd-* ./your-project/.vscode/skills/
+cp -r skills/_shared skills/sdd-* skills/skill-registry ./your-project/.vscode/skills/
 
 # Or using the install script
 ./scripts/install.sh  # Choose VS Code option
@@ -602,11 +638,11 @@ Open VS Code, open the Chat panel (Ctrl+Cmd+I / Ctrl+Alt+I), and type `/sdd-init
 ./scripts/install.sh  # Choose Antigravity option
 
 # Or manually (global)
-cp -r skills/_shared skills/sdd-* ~/.gemini/antigravity/skills/
+cp -r skills/_shared skills/sdd-* skills/skill-registry ~/.gemini/antigravity/skills/
 
 # Workspace-specific (per project)
 mkdir -p .agent/skills
-cp -r skills/_shared skills/sdd-* .agent/skills/
+cp -r skills/_shared skills/sdd-* skills/skill-registry .agent/skills/
 ```
 
 **2. Add orchestrator instructions:**
@@ -632,7 +668,7 @@ Open Antigravity and type `/sdd-init` in the agent panel.
 ./scripts/install.sh  # Choose option 3: Cursor
 
 # Or per-project
-cp -r skills/_shared skills/sdd-* ./your-project/skills/
+cp -r skills/_shared skills/sdd-* skills/skill-registry ./your-project/skills/
 ```
 
 **2. Add orchestrator to `.cursorrules`:**
@@ -685,20 +721,21 @@ This means:
 agent-teams-lite/
 ├── README.md                          ← You are here
 ├── LICENSE
-├── skills/                            ← The 9 sub-agent skill files + shared conventions
+├── skills/                            ← 10 skill files + shared conventions
 │   ├── _shared/                       ← Shared conventions (referenced by all skills)
-│   │   ├── persistence-contract.md    ← Mode resolution rules (engram/openspec/hybrid/none)
-│   │   ├── engram-convention.md       ← Deterministic naming & recovery protocol
+│   │   ├── persistence-contract.md    ← Mode resolution, sub-agent context protocol, skill loading
+│   │   ├── engram-convention.md       ← Supplementary: deterministic naming & recovery
 │   │   └── openspec-convention.md     ← File paths, directory structure, config reference
-│   ├── sdd-init/SKILL.md
+│   ├── sdd-init/SKILL.md             ← Bootstraps project + builds skill registry
 │   ├── sdd-explore/SKILL.md
 │   ├── sdd-propose/SKILL.md
 │   ├── sdd-spec/SKILL.md
 │   ├── sdd-design/SKILL.md
 │   ├── sdd-tasks/SKILL.md
-│   ├── sdd-apply/SKILL.md             ← v2.0: TDD workflow support
-│   ├── sdd-verify/SKILL.md            ← v2.0: Real test execution + spec compliance matrix
-│   └── sdd-archive/SKILL.md
+│   ├── sdd-apply/SKILL.md            ← v2.0: TDD workflow support
+│   ├── sdd-verify/SKILL.md           ← v2.0: Real test execution + spec compliance matrix
+│   ├── sdd-archive/SKILL.md
+│   └── skill-registry/SKILL.md       ← Scans skills + conventions, writes .atl/skill-registry.md
 ├── examples/                          ← Config examples per tool
 │   ├── claude-code/CLAUDE.md
 │   ├── opencode/
@@ -711,6 +748,10 @@ agent-teams-lite/
 │   └── cursor/.cursorrules
 └── scripts/
     └── install.sh                     ← Interactive installer
+
+# Generated in target projects (not in this repo):
+.atl/
+└── skill-registry.md                  ← Auto-generated skill catalog for sub-agents
 ```
 
 ---

@@ -307,12 +307,37 @@ function Set-OpenCode {
                 $example = Get-Content -Path $exampleConfig -Raw | ConvertFrom-Json
 
                 # Merge agent config (OpenCode uses "agent" singular)
+                # Strategy: replace all sdd-* agents with template, preserve user model choices
                 if ($example.PSObject.Properties['agent']) {
                     if (-not $existing.PSObject.Properties['agent']) {
-                        $existing | Add-Member -NotePropertyName 'agent' -NotePropertyValue @{}
+                        $existing | Add-Member -NotePropertyName 'agent' -NotePropertyValue ([PSCustomObject]@{})
                     }
+
+                    # 1. Save existing model fields from sdd-* agents
+                    $savedModels = @{}
+                    foreach ($prop in @($existing.agent.PSObject.Properties)) {
+                        if ($prop.Name -like 'sdd-*' -and $prop.Value.PSObject.Properties['model']) {
+                            $savedModels[$prop.Name] = $prop.Value.model
+                        }
+                    }
+
+                    # 2. Remove all existing sdd-* agents (clean slate)
+                    foreach ($prop in @($existing.agent.PSObject.Properties)) {
+                        if ($prop.Name -like 'sdd-*') {
+                            $existing.agent.PSObject.Properties.Remove($prop.Name)
+                        }
+                    }
+
+                    # 3. Add new agents from template
                     foreach ($prop in $example.agent.PSObject.Properties) {
                         $existing.agent | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value -Force
+                    }
+
+                    # 4. Restore user model choices
+                    foreach ($name in $savedModels.Keys) {
+                        if ($existing.agent.PSObject.Properties[$name]) {
+                            $existing.agent.$name | Add-Member -NotePropertyName 'model' -NotePropertyValue $savedModels[$name] -Force
+                        }
                     }
                 }
 

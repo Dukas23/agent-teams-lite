@@ -350,18 +350,37 @@ setup_opencode() {
         ok "$count OpenCode commands installed ($OPENCODE_MODE mode)"
     fi
 
-    # Merge opencode.json agent config
+    # Merge opencode.json agent config (idempotent: replaces sdd-* agents, preserves user model choices)
     if command -v jq &>/dev/null && [ -f "$example_config" ]; then
         if [ -f "$config_file" ]; then
-            # Extract agent block from example and merge into existing config
-            # Note: OpenCode uses "agent" (singular) as the key
             local example_agents
             example_agents=$(jq '.agent // {}' "$example_config")
 
+            # Smart merge:
+            # 1. Remove all existing sdd-* keys (clean slate for our agents)
+            # 2. Preserve "model" field from existing sdd-* agents (user customization)
+            # 3. Add new agent definitions, restoring preserved model fields
+            # 4. Don't touch non-sdd agents
             local merged
             merged=$(jq --argjson new_agents "$example_agents" '
-                .agent = ((.agent // {}) + $new_agents)
-                | del(.agents)
+                # 1. Capture existing model fields from sdd-* agents (user customization)
+                (reduce ((.agent // {}) | to_entries[] |
+                    select(.key | startswith("sdd-")) | select(.value.model)) as $e
+                    ({}; . + {($e.key): $e.value.model})) as $saved_models |
+
+                # 2. Remove all sdd-* agents, keep user custom agents, add new template agents
+                .agent = (
+                    ((.agent // {}) | with_entries(select(.key | startswith("sdd-") | not)))
+                    + $new_agents
+                ) |
+
+                # 3. Restore user model choices onto new agent definitions
+                reduce ($saved_models | to_entries[]) as $m (.;
+                    if .agent[$m.key] then .agent[$m.key].model = $m.value else . end
+                ) |
+
+                # 4. Clean up stale "agents" plural key
+                del(.agents)
             ' "$config_file")
 
             echo "$merged" > "$config_file"

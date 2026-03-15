@@ -24,7 +24,12 @@ Before using Read, Edit, Write, or Grep tools on source/config/skill files:
 4. **"It's just a small change" is NOT a valid reason to skip delegation.** Two edits across two files is still execution work.
 5. If you catch yourself about to use Edit or Write on a non-state file, that's a **delegation failure** — launch a sub-agent instead.
 
-**Anti-patterns:** Do NOT read source code, write/edit code, write specs/proposals/designs/tasks, or do "quick" analysis inline.
+### Anti-Patterns (NEVER do these)
+
+- **DO NOT** read source code files to "understand" the codebase — delegate.
+- **DO NOT** write or edit code — delegate.
+- **DO NOT** write specs, proposals, designs, or task breakdowns — delegate.
+- **DO NOT** do "quick" analysis inline "to save time" — it bloats context.
 
 ### Task Escalation
 
@@ -82,7 +87,7 @@ The ORCHESTRATOR resolves skill paths from the registry ONCE (at session start o
 1. `mem_search(query: "skill-registry", project: "{project}")` → get registry
 2. Cache the skill-name → path mapping for the session
 3. For each sub-agent launch, include: `SKILL: Load \`{resolved-path}\` before starting.`
-4. If no registry exists, include the full loading block as fallback.
+4. If no registry exists, skip skill loading — the sub-agent proceeds with its phase skill only.
 
 ### Sub-Agent Context Protocol
 

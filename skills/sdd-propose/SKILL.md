@@ -40,7 +40,7 @@ From the orchestrator:
     content: "{your full proposal markdown}"
   )
   ```
-  `topic_key` enables upserts — saving again updates, not duplicates. (See `skills/_shared/sdd-phase-common.md`.)
+  `topic_key` enables upserts — saving again updates, not duplicates. (Read `skills/_shared/sdd-phase-common.md`.)
 
   (See `skills/_shared/engram-convention.md` for full naming conventions.)
 - If mode is `openspec`: Read and follow `skills/_shared/openspec-convention.md`.
@@ -50,11 +50,11 @@ From the orchestrator:
 
 ## What to Do
 
-### Step 1: Load Skill Registry
+### Step 1: Load Skills
 
-> **Common protocol**: See `skills/_shared/sdd-phase-common.md` for the full skill registry loading procedure, engram upsert note, and return envelope format.
+The orchestrator provides your skill path in the launch prompt. Load it now. If no path was provided, proceed without additional skills.
 
-Load the skill registry and any matching skills before proceeding.
+> Read `skills/_shared/sdd-phase-common.md` for the engram upsert note and return envelope format.
 
 ### Step 2: Create Change Directory
 
@@ -177,5 +177,5 @@ Ready for specs (sdd-spec) or design (sdd-design).
 - Every proposal MUST have success criteria
 - Use concrete file paths in "Affected Areas" when possible
 - Apply any `rules.proposal` from `openspec/config.yaml`
-- **Token budget**: Proposal artifact MUST be under 1,500 tokens (~400 words). Use bullet points and tables over prose. Headers organize, not explain.
-- Return a structured envelope with: `status`, `executive_summary`, `detailed_report` (optional), `artifacts`, `next_recommended`, and `risks` (see `skills/_shared/sdd-phase-common.md` for the full envelope spec)
+- **Size budget**: Proposal artifact MUST be under 400 words. Use bullet points and tables over prose. Headers organize, not explain.
+- Return a structured envelope with: `status`, `executive_summary`, `detailed_report` (optional), `artifacts`, `next_recommended`, and `risks` (read `skills/_shared/sdd-phase-common.md` for the full envelope spec)

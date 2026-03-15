@@ -4,15 +4,11 @@ This file contains boilerplate that is **identical** across all SDD phase skills
 
 ---
 
-## Skill Registry Loading
+## Skill Registry
 
-**Do this FIRST, before any other work.**
+The orchestrator pre-resolves skill paths before launching you. You receive a `SKILL: Load \`{path}\`` instruction in your launch prompt. Load that file — do NOT search for the skill registry yourself.
 
-1. Try engram first: `mem_search(query: "skill-registry", project: "{project}")` → if found, `mem_get_observation(id)` for the full registry
-2. If engram not available or not found: read `.atl/skill-registry.md` from the project root
-3. If neither exists: proceed without skills (not an error)
-
-From the registry, identify and read any skills whose triggers match your task. Also read any project convention files listed in the registry.
+If no skill path was provided in your launch prompt, proceed without loading additional skills (not an error).
 
 ---
 

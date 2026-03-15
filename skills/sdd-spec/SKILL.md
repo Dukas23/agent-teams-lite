@@ -45,7 +45,7 @@ From the orchestrator:
     content: "{your full spec markdown — all domains concatenated}"
   )
   ```
-  `topic_key` enables upserts — saving again updates, not duplicates. (See `skills/_shared/sdd-phase-common.md`.)
+  `topic_key` enables upserts — saving again updates, not duplicates. (Read `skills/_shared/sdd-phase-common.md`.)
 
   (See `skills/_shared/engram-convention.md` for full naming conventions.)
 - If mode is `openspec`: Read and follow `skills/_shared/openspec-convention.md`.
@@ -54,11 +54,11 @@ From the orchestrator:
 
 ## What to Do
 
-### Step 1: Load Skill Registry
+### Step 1: Load Skills
 
-> **Common protocol**: See `skills/_shared/sdd-phase-common.md` for the full skill registry loading procedure, engram upsert note, and return envelope format.
+The orchestrator provides your skill path in the launch prompt. Load it now. If no path was provided, proceed without additional skills.
 
-Load the skill registry and any matching skills before proceeding.
+> Read `skills/_shared/sdd-phase-common.md` for the engram upsert note and return envelope format.
 
 ### Step 2: Identify Affected Domains
 
@@ -211,8 +211,8 @@ Ready for design (sdd-design). If design already exists, ready for tasks (sdd-ta
 - Keep scenarios TESTABLE — someone should be able to write an automated test from each one
 - DO NOT include implementation details in specs — specs describe WHAT, not HOW
 - Apply any `rules.specs` from `openspec/config.yaml`
-- **Token budget**: Spec artifact MUST be under 2,500 tokens (~650 words). Prefer requirement tables over narrative descriptions. Each scenario: 3-5 lines max.
-- Return a structured envelope with: `status`, `executive_summary`, `detailed_report` (optional), `artifacts`, `next_recommended`, and `risks` (see `skills/_shared/sdd-phase-common.md` for the full envelope spec)
+- **Size budget**: Spec artifact MUST be under 650 words. Prefer requirement tables over narrative descriptions. Each scenario: 3-5 lines max.
+- Return a structured envelope with: `status`, `executive_summary`, `detailed_report` (optional), `artifacts`, `next_recommended`, and `risks` (read `skills/_shared/sdd-phase-common.md` for the full envelope spec)
 
 ## RFC 2119 Keywords Quick Reference
 

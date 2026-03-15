@@ -15,7 +15,8 @@
   <a href="#commands">Commands</a> &bull;
   <a href="#installation">Installation</a> &bull;
   <a href="#releases">Releases</a> &bull;
-  <a href="#supported-tools">Supported Tools</a>
+  <a href="#supported-tools">Supported Tools</a> &bull;
+  <a href="#token-economics">Token Economics</a>
 </p>
 
 ---
@@ -51,7 +52,7 @@ ORCHESTRATOR (delegate-only, minimal context):
 
 **The key insight**: the orchestrator NEVER does real work directly — not just SDD phases, but ANY task. It delegates everything to sub-agents, tracks state, and synthesizes summaries. This keeps the main thread small and stable. For substantial features, it uses the SDD workflow (structured DAG of phases). For smaller tasks, it still delegates to a general sub-agent.
 
-**Sub-agents auto-discover your skills.** If you have coding skills installed (React, TDD, Playwright, Django, etc.), sub-agents automatically load the relevant ones before writing code. A [skill registry](#skill-registry) catalogs your skills and project conventions so every sub-agent knows what patterns to follow — even though it starts with a fresh context.
+**Skills are pre-resolved by the orchestrator.** If you have coding skills installed (React, TDD, Playwright, Django, etc.), the orchestrator resolves their paths once and passes them directly to each sub-agent's launch prompt. A [skill registry](#skill-registry) catalogs your skills and project conventions — the orchestrator reads it once per session so every sub-agent receives the right skill paths without needing to search for them.
 
 ### Persistence Is Pluggable
 
@@ -141,9 +142,10 @@ graph TB
         L2_Spec -.->|"persist"| L2_Store
         L2_Design -.->|"persist"| L2_Store
         L2_Apply -.->|"persist"| L2_Store
-        L2_Explore -.->|"Step 1: load"| L2_Registry
-        L2_Apply -.->|"Step 1: load"| L2_Registry
-        L2_Verify -.->|"Step 1: load"| L2_Registry
+        L2_Orch -.->|"resolves once"| L2_Registry
+        L2_Orch -.->|"pre-resolved paths"| L2_Explore
+        L2_Orch -.->|"pre-resolved paths"| L2_Apply
+        L2_Orch -.->|"pre-resolved paths"| L2_Verify
     end
 
     subgraph "Level 3 — Full Agent Teams"
@@ -210,16 +212,18 @@ graph TB
     │         │         │         │         │         │
     └─────────┴─────────┴────┬────┴─────────┴─────────┘
                              │
-                    Step 1: load skills
+              (receive pre-resolved skill paths
+               from the orchestrator's launch prompt)
                              │
-                 ┌───────────▼───────────┐
-                 │    SKILL REGISTRY     │
-                 │                       │
-                 │ • Your coding skills  │
-                 │   (React, TDD, etc.)  │
-                 │ • Project conventions │
-                 │   (agents.md, etc.)   │
-                 └───────────────────────┘
+                 ┌───────────▼───────────┐      ┌────────────────────┐
+                 │    SUB-AGENT USES     │      │   SKILL REGISTRY   │
+                 │   skills as directed  │      │                    │
+                 │ • React, TDD, etc.   │      │ • Your coding      │
+                 │ • Project conventions │      │   skills + paths   │
+                 └───────────────────────┘      │ • Project conven- │
+                                                │   tions (agents.md)│
+                           ORCHESTRATOR ────────▶ resolves once/session
+                                                └────────────────────┘
 ```
 
 ### The Dependency Graph
@@ -420,7 +424,7 @@ AI:  Implementing Phase 1 (Foundation)...
 
 ## The Sub-Agents
 
-Each sub-agent is a SKILL.md file — pure Markdown instructions that any AI assistant can follow. All sub-agents load the [skill registry](#skill-registry) as Step 1 before starting work.
+Each sub-agent is a SKILL.md file — pure Markdown instructions that any AI assistant can follow. The orchestrator resolves skill paths from the [skill registry](#skill-registry) and passes them directly in each sub-agent's launch prompt — sub-agents receive ready-to-use paths, not a search task.
 
 | Sub-Agent | Skill File | What It Does |
 |-----------|-----------|-------------|
@@ -452,15 +456,18 @@ All skills reference three shared convention files in `skills/_shared/`. Critica
 
 ### Skill Registry
 
-Sub-agents start with a **fresh context** — they don't know what user skills exist (React, TDD, Playwright, etc.). The skill registry solves this.
+Sub-agents start with a **fresh context** — they don't know what user skills exist (React, TDD, Playwright, etc.). The skill registry solves this — but the key is **who reads it**.
 
 **How it works:**
 1. `/sdd-init` or `/skill-registry` scans your installed skills and project conventions
 2. Writes `.atl/skill-registry.md` in the project root (mode-independent, always created)
 3. If engram is available, also saves to engram (cross-session bonus)
-4. Every sub-agent reads the registry as **Step 1** before starting any work
+4. The **orchestrator** reads the registry once per session and resolves the relevant skill paths
+5. Each sub-agent receives the **pre-resolved paths** directly in its launch prompt — no registry search needed
 
-**Read priority:** Engram first (fast, survives compaction) → `.atl/skill-registry.md` as fallback.
+**Orchestrator reads the registry. Sub-agents receive paths. Sub-agents do NOT search for the registry.**
+
+**Orchestrator read priority:** Engram first (fast, survives compaction) → `.atl/skill-registry.md` as fallback.
 
 **What it contains:**
 - User skills table: trigger → skill name → path (e.g., "React components" → `react-19` → `~/.claude/skills/react-19/SKILL.md`)
@@ -483,8 +490,8 @@ Sub-agents start with a **fresh context** — they don't know what user skills e
 
 **v3.3.1 — Skill Registry:**
 - New `skill-registry` skill for creating/updating the registry on demand.
-- All sub-agents load the skill registry as **Step 1** — they now know about your coding skills (React, TDD, Playwright, etc.) and project conventions.
-- Engram-first + `.atl/skill-registry.md` fallback — works with or without engram.
+- Orchestrator reads the skill registry once per session and passes pre-resolved skill paths to each sub-agent's launch prompt — sub-agents know about your coding skills (React, TDD, Playwright, etc.) and project conventions without needing to search themselves.
+- Engram-first + `.atl/skill-registry.md` fallback — orchestrator resolution works with or without engram.
 
 **v3.3.5 — Full Setup Scripts:**
 - New `setup.sh` (Unix) and `setup.ps1` (Windows) that auto-detect agents, install skills, AND configure orchestrator prompts in one command.
@@ -801,6 +808,14 @@ This means:
 - Less context compression = fewer hallucinations
 - Each sub-agent gets focused instructions = better output quality
 - Orchestrator stays lightweight = can handle longer feature development sessions
+
+---
+
+## Token Economics
+
+We measured the real token costs of the orchestrator + sub-agent delegation model across 3 independent analyses. Results: delegation saves 50-70% of tokens for medium-to-large features by avoiding context pollution and compaction cascades.
+
+→ **[Full analysis: docs/token-economics.md](docs/token-economics.md)**
 
 ---
 

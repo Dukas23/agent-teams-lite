@@ -53,7 +53,7 @@ From the orchestrator:
     content: "{your full tasks markdown}"
   )
   ```
-  `topic_key` enables upserts — saving again updates, not duplicates. (See `skills/_shared/sdd-phase-common.md`.)
+  `topic_key` enables upserts — saving again updates, not duplicates. (Read `skills/_shared/sdd-phase-common.md`.)
 
   (See `skills/_shared/engram-convention.md` for full naming conventions.)
 - If mode is `openspec`: Read and follow `skills/_shared/openspec-convention.md`.
@@ -62,11 +62,11 @@ From the orchestrator:
 
 ## What to Do
 
-### Step 1: Load Skill Registry
+### Step 1: Load Skills
 
-> **Common protocol**: See `skills/_shared/sdd-phase-common.md` for the full skill registry loading procedure, engram upsert note, and return envelope format.
+The orchestrator provides your skill path in the launch prompt. Load it now. If no path was provided, proceed without additional skills.
 
-Load the skill registry and any matching skills before proceeding.
+> Read `skills/_shared/sdd-phase-common.md` for the engram upsert note and return envelope format.
 
 ### Step 2: Analyze the Design
 
@@ -209,5 +209,5 @@ Ready for implementation (sdd-apply).
 - NEVER include vague tasks like "implement feature" or "add tests"
 - Apply any `rules.tasks` from `openspec/config.yaml`
 - If the project uses TDD, integrate test-first tasks: RED task (write failing test) → GREEN task (make it pass) → REFACTOR task (clean up)
-- **Token budget**: Tasks artifact MUST be under 2,000 tokens (~530 words). Each task: 1-2 lines max. Use checklist format, not paragraphs.
-- Return a structured envelope with: `status`, `executive_summary`, `detailed_report` (optional), `artifacts`, `next_recommended`, and `risks` (see `skills/_shared/sdd-phase-common.md` for the full envelope spec)
+- **Size budget**: Tasks artifact MUST be under 530 words. Each task: 1-2 lines max. Use checklist format, not paragraphs.
+- Return a structured envelope with: `status`, `executive_summary`, `detailed_report` (optional), `artifacts`, `next_recommended`, and `risks` (read `skills/_shared/sdd-phase-common.md` for the full envelope spec)

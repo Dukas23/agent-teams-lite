@@ -62,15 +62,9 @@ From the orchestrator:
 
 ## What to Do
 
-### Step 1: Load Skill Registry
+### Step 1: Load Skills
 
-**Do this FIRST, before any other work.**
-
-1. Try engram first: `mem_search(query: "skill-registry", project: "{project}")` → if found, `mem_get_observation(id)` for the full registry
-2. If engram not available or not found: read `.atl/skill-registry.md` from the project root
-3. If neither exists: proceed without skills (not an error)
-
-From the registry, identify and read any skills whose triggers match your task. Also read any project convention files listed in the registry.
+The orchestrator provides your skill path in the launch prompt. Load it now. If no path was provided, proceed without additional skills.
 
 ### Step 2: Sync Delta Specs to Main Specs
 

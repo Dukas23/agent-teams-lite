@@ -61,7 +61,7 @@ From the orchestrator:
     content: "{your implementation progress report}"
   )
   ```
-  `topic_key` enables upserts — saving again updates, not duplicates. (See `skills/_shared/sdd-phase-common.md`.)
+  `topic_key` enables upserts — saving again updates, not duplicates. (Read `skills/_shared/sdd-phase-common.md`.)
 
   (See `skills/_shared/engram-convention.md` for advanced operations.)
 - If mode is `openspec`: Read and follow `skills/_shared/openspec-convention.md`. Update `tasks.md` with `[x]` marks.
@@ -70,11 +70,11 @@ From the orchestrator:
 
 ## What to Do
 
-### Step 1: Load Skill Registry
+### Step 1: Load Skills
 
-> **Common protocol**: See `skills/_shared/sdd-phase-common.md` for the full skill registry loading procedure, engram upsert note, and return envelope format.
+The orchestrator provides your skill path in the launch prompt. Load it now. If no path was provided, proceed without additional skills.
 
-Load the skill registry and any matching skills before proceeding.
+> Read `skills/_shared/sdd-phase-common.md` for the engram upsert note and return envelope format.
 
 ### Step 2: Read Context
 
@@ -253,4 +253,4 @@ If none, say "None."}
 - Apply any `rules.apply` from `openspec/config.yaml`
 - If TDD mode is detected (Step 3), ALWAYS follow the RED → GREEN → REFACTOR cycle — never skip RED (writing the failing test first)
 - When running tests during TDD, run ONLY the relevant test file/suite, not the entire test suite (for speed)
-- Return a structured envelope with: `status`, `executive_summary`, `detailed_report` (optional), `artifacts`, `next_recommended`, and `risks` (see `skills/_shared/sdd-phase-common.md` for the full envelope spec)
+- Return a structured envelope with: `status`, `executive_summary`, `detailed_report` (optional), `artifacts`, `next_recommended`, and `risks` (read `skills/_shared/sdd-phase-common.md` for the full envelope spec)

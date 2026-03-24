@@ -181,6 +181,10 @@ background-agents.ts (1447 lines)
 - **No undo tracking**: Background sessions are isolated from OpenCode's session tree — undo/branching cannot revert changes made by delegated agents.
 - **Metadata generation**: Requires `small_model` configured in OpenCode for AI-generated titles/descriptions. Falls back to first-line truncation if not configured.
 
+## Known Issues
+
+- **Model routing via `agent` parameter**: Some OpenCode providers (e.g., gentle-ai) may not fully apply the target agent's `model` config when `delegate(prompt, agent)` creates a child session via `session.prompt()`. The sub-agent session may inherit the parent's model instead. **Workaround:** Use `@agent-name` text mentions in the orchestrator's output to trigger OpenCode's native agent routing, which consistently applies the target agent's full config. See [Model-Aware Routing via Agent Mentions](../../../docs/sub-agents.md#model-aware-routing-via-agent-mentions) for details. (Reported by Bismarck Cerda, observation #1290)
+
 ## Monitoring
 
 Navigate background sessions in OpenCode's TUI:
